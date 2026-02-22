@@ -1,16 +1,21 @@
-# my_app
+# 🚚 CeylonDash Mobile
 
-A new Flutter project.
+A high-accessibility logistics platform optimized for the Sri Lankan market.
 
-## Getting Started
+## 🏗 Architecture: Clean Architecture + BLoC
+We follow a strict separation of layers to ensure testability and scalability:
 
-This project is a starting point for a Flutter application.
+1. **Domain Layer (Inner Circle):** Pure Dart. Contains Entities, Use Cases, and Repository Interfaces. **No dependencies on Flutter.**
+2. **Data Layer:** Repository implementations and Data Sources (API/Local DB). Handles JSON serialization.
+3. **Presentation Layer:** Flutter widgets and BLoC state management.
 
-A few resources to get you started if this is your first Flutter project:
+## 🎨 Accessibility Principles
+- **Minimal Text:** Rely on icons and colors for status.
+- **High Contrast:** Optimized for outdoor usage (delivery riders).
+- **Haptic Feedback:** Vibration confirmation for all critical security actions (QR generation).
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🛠 Tech Stack
+- **State Management:** Flutter BLoC
+- **Navigation:** GoRouter (planned)
+- **Networking:** Dio
+- **Dependency Injection:** GetIt
