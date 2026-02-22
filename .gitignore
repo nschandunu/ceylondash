@@ -2,6 +2,7 @@
 # Environment Variables
 # ========================
 .env
+.env.example
 .env.local
 .env.development
 .env.staging
@@ -14,7 +15,6 @@
 # Miscellaneous
 # ========================
 *.class
-*.log
 *.pyc
 *.swp
 .DS_Store
@@ -88,8 +88,6 @@ app.*.map.json
 /android/captures/
 /android/local.properties
 **/android/**/GeneratedPluginRegistrant.java
-*.apk
-*.aab
 
 # ========================
 # iOS / macOS
@@ -169,3 +167,69 @@ celerybeat.pid
 dump/
 mongod.lock
 data/db/
+
+# ========================
+# Firebase Configuration Files
+# ========================
+# Android Firebase config (contains API keys)
+**/google-services.json
+# iOS Firebase config (contains API keys)
+**/GoogleService-Info.plist
+# FlutterFire generated config
+**/firebase_options.dart
+**/firebase_app_id_file.json
+
+# ========================
+# Signing & Certificates
+# ========================
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+*.crt
+**/key.properties
+
+# ========================
+# Service Account & Credentials
+# ========================
+**/serviceAccount*.json
+**/service-account*.json
+**/credentials*.json
+**/*-credentials.json
+**/*-service-account*.json
+
+# ========================
+# Database Files
+# ========================
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-shm
+*.db-wal
+
+# ========================
+# Build Artifacts & Binaries
+# ========================
+*.apk
+*.aab
+*.ipa
+*.app
+*.exe
+*.msi
+*.dmg
+*.deb
+*.rpm
+*.pkg
+*.appx
+*.msix
+
+# ========================
+# Logs & Debug
+# ========================
+*.log
+debug.log
+crash.log
+error.log
+logs/

@@ -18,6 +18,13 @@ const normalizePhoneNumber = (phone) => {
 
 const UserSchema = new mongoose.Schema(
   {
+    firebaseUid: {
+      type: String,
+      unique: true,
+      sparse: true, // allows null for users not yet linked to Firebase
+      index: true,
+    },
+
     name: {
       type: String,
       required: [true, "Name is required"],
