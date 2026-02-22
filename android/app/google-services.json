@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "234556111958",
+    "project_id": "ceylondash",
+    "storage_bucket": "ceylondash.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:234556111958:android:ec8404f6a3b1c50a83cff7",
+        "android_client_info": {
+          "package_name": "com.example.my_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "234556111958-ho1ltibgl8od6og7fl0q9pduob2uhjh8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2IHsGJCPfQIjw7m4QZbF_oKUmW9ctKBc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "234556111958-ho1ltibgl8od6og7fl0q9pduob2uhjh8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "234556111958-ohlrg5ljaf61nap40fuco581oj9cnphp.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.myApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
