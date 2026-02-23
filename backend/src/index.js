@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 
+const parcelRoutes = require('./routes/parcelRoutes');
+
 const app = express();
 app.use(express.json());
 
@@ -17,6 +19,8 @@ mongoose.connect(MONGO_URI)
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+app.use('/api/parcels', parcelRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

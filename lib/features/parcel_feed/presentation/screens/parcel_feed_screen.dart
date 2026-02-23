@@ -33,6 +33,13 @@ class _ParcelFeedScreenState extends State<ParcelFeedScreen> {
     });
   }
 
+  Future<void> _refresh() async {
+    setState(() {
+      _parcelFuture = _service.fetchParcels();
+    });
+    await _parcelFuture;
+  }
+
   ParcelStats _computeStats(List<Parcel> parcels) {
     return ParcelStats(
       total: parcels.length,
@@ -62,36 +69,40 @@ class _ParcelFeedScreenState extends State<ParcelFeedScreen> {
           final parcels = snapshot.data ?? const [];
           final stats = _computeStats(parcels);
 
-          return CustomScrollView(
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            slivers: [
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: FeedHeaderDelegate(
-                  stats: stats,
-                  expandedHeight: AppDimensions.headerExpandedHeight,
-                  collapsedHeight: AppDimensions.headerCollapsedHeight,
+          return RefreshIndicator(
+            color: AppColors.cyan,
+            onRefresh: _refresh,
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
+              slivers: [
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: FeedHeaderDelegate(
+                    stats: stats,
+                    expandedHeight: AppDimensions.headerExpandedHeight,
+                    collapsedHeight: AppDimensions.headerCollapsedHeight,
+                  ),
                 ),
-              ),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: AppDimensions.spacing16),
-              ),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppDimensions.spacing16),
+                ),
 
-              if (snapshot.connectionState == ConnectionState.waiting)
-                _buildLoadingSliver()
-              else if (snapshot.hasError)
-                _buildErrorSliver(snapshot.error!)
-              else if (parcels.isEmpty)
-                _buildEmptySliver()
-              else
-                _buildParcelList(parcels),
+                if (snapshot.connectionState == ConnectionState.waiting)
+                  _buildLoadingSliver()
+                else if (snapshot.hasError)
+                  _buildErrorSliver(snapshot.error!)
+                else if (parcels.isEmpty)
+                  _buildEmptySliver()
+                else
+                  _buildParcelList(parcels),
 
-              const SliverToBoxAdapter(
-                child: SizedBox(height: AppDimensions.spacing32),
-              ),
-            ],
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppDimensions.spacing32),
+                ),
+              ],
+            ),
           );
         },
       ),
