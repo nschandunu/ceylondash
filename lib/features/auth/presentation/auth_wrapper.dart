@@ -6,6 +6,8 @@ import '../bloc/auth_bloc.dart';
 import '../bloc/auth_state.dart';
 import 'screens/login_screen.dart';
 import 'dashboard_screen.dart';
+import 'rider_dashboard_screen.dart';
+import 'admin_dashboard_screen.dart';
 
 /// Routes based on AuthBloc state:
 /// - Authenticated → DashboardScreen
@@ -19,6 +21,15 @@ class AuthWrapper extends StatelessWidget {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is Authenticated) {
+          final role = state.mongoUser['role'] as String?;
+          
+          if (role == 'rider') {
+            return const RiderDashboardScreen();
+          } else if (role == 'admin') {
+            return const AdminDashboardScreen();
+          }
+          
+          // Default to user dashboard
           return const DashboardScreen();
         }
 

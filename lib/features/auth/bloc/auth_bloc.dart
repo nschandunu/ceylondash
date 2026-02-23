@@ -4,10 +4,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'auth_event.dart';
 import 'auth_state.dart';
+import '../data/auth_service.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  AuthBloc({FirebaseAuth? firebaseAuth})
+  AuthBloc({FirebaseAuth? firebaseAuth, AuthService? authService})
       : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
+        _authService = authService ?? AuthService(),
         super(AuthInitial()) {
     on<AuthStarted>(_onAuthStarted);
     on<AuthUserChanged>(_onAuthUserChanged);
@@ -15,6 +17,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   final FirebaseAuth _firebaseAuth;
+  final AuthService _authService;
   StreamSubscription<User?>? _authSubscription;
 
   void _onAuthStarted(AuthStarted event, Emitter<AuthState> emit) {
@@ -28,11 +31,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     });
   }
 
-  /// Pure state mapper — no side effects, so no loop.
-  void _onAuthUserChanged(AuthUserChanged event, Emitter<AuthState> emit) {
+  /// Fetches MongoDB profile before emitting Authenticated
+  Future<void> _onAuthUserChanged(
+    AuthUserChanged event,
+    Emitter<AuthState> emit,
+  ) async {
     final user = event.user;
     if (user != null) {
-      emit(Authenticated(user));
+      emit(AuthLoading());
+      try {
+        final response = await _authService.syncUser();
+        final mongoUser = response['data']?['user'] as Map<String, dynamic>? ?? {};
+        emit(Authenticated(user, mongoUser));
+      } catch (e) {
+        // If sync fails, force a logout to prevent broken state
+        await _firebaseAuth.signOut();
+        emit(Unauthenticated());
+      }
     } else {
       emit(Unauthenticated());
     }

@@ -16,12 +16,13 @@ class AuthLoading extends AuthState {}
 
 /// User is authenticated.
 class Authenticated extends AuthState {
-  const Authenticated(this.user);
+  const Authenticated(this.user, this.mongoUser);
 
   final User user;
+  final Map<String, dynamic> mongoUser;
 
   @override
-  List<Object?> get props => [user.uid];
+  List<Object?> get props => [user.uid, mongoUser];
 }
 
 /// User is not authenticated.
