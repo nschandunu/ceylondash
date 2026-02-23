@@ -1,5 +1,4 @@
-import 'package:equatable/equatable.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+part of 'auth_bloc.dart';
 
 sealed class AuthEvent extends Equatable {
   const AuthEvent();
