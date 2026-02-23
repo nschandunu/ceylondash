@@ -10,7 +10,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
         super(AuthInitial()) {
     on<AuthStarted>(_onAuthStarted);
-    on<AuthLoggedIn>(_onAuthLoggedIn);
+    on<AuthUserChanged>(_onAuthUserChanged);
     on<AuthLoggedOut>(_onAuthLoggedOut);
   }
 
@@ -20,19 +20,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   void _onAuthStarted(AuthStarted event, Emitter<AuthState> emit) {
     emit(AuthLoading());
 
-    // Listen to Firebase auth state changes and map to bloc events.
+    // Listen to Firebase auth state changes.
+    // This only *observes* — it never calls signOut().
     _authSubscription?.cancel();
     _authSubscription = _firebaseAuth.authStateChanges().listen((user) {
-      if (user != null) {
-        add(AuthLoggedIn());
-      } else {
-        add(AuthLoggedOut());
-      }
+      add(AuthUserChanged(user));
     });
   }
 
-  void _onAuthLoggedIn(AuthLoggedIn event, Emitter<AuthState> emit) {
-    final user = _firebaseAuth.currentUser;
+  /// Pure state mapper — no side effects, so no loop.
+  void _onAuthUserChanged(AuthUserChanged event, Emitter<AuthState> emit) {
+    final user = event.user;
     if (user != null) {
       emit(Authenticated(user));
     } else {
@@ -40,12 +38,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
+  /// User-initiated logout — calls signOut() once.
+  /// The authStateChanges stream will then fire AuthUserChanged(null),
+  /// which emits Unauthenticated without calling signOut again.
   Future<void> _onAuthLoggedOut(
     AuthLoggedOut event,
     Emitter<AuthState> emit,
   ) async {
     await _firebaseAuth.signOut();
-    emit(Unauthenticated());
+    // No need to emit — authStateChanges will handle it.
   }
 
   @override

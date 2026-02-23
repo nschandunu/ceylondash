@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -104,6 +105,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         };
       });
     } catch (e) {
+      debugPrint('❌ Registration sync error: $e');
+
       // If Firebase user was created but sync failed, delete the Firebase user
       // to avoid orphaned accounts.
       final currentUser = FirebaseAuth.instance.currentUser;
@@ -115,8 +118,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         }
       }
 
+      // Extract a meaningful message from Dio errors
+      String message = 'Registration failed. Please try again.';
+      if (e is DioException && e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data['error'] != null) {
+          message = data['error']['message'] ?? message;
+        }
+      }
+
       setState(() {
-        _errorMessage = 'Registration failed. Please try again.';
+        _errorMessage = message;
       });
     } finally {
       if (mounted) {
