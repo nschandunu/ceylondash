@@ -21,7 +21,7 @@ const UserSchema = new mongoose.Schema(
     firebaseUid: {
       type: String,
       unique: true,
-      sparse: true, // allows null for users not yet linked to Firebase
+      sparse: true,
       index: true,
     },
 
@@ -29,6 +29,12 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: [true, "Name is required"],
       trim: true,
+    },
+
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
     },
 
     phoneNumber: {
@@ -49,7 +55,6 @@ const UserSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      required: [true, "Password is required"],
       minlength: [8, "Password must be at least 8 characters"],
       select: false,
     },
@@ -58,9 +63,35 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: [true, "Role is required"],
       enum: {
-        values: ["user", "rider", "admin"],
+        values: ["rider", "client", "business", "admin"],
         message: '"{VALUE}" is not a permitted role',
       },
+    },
+
+    // Rider-specific fields
+    vehicleType: {
+      type: String,
+      trim: true,
+    },
+    licenseNumber: {
+      type: String,
+      trim: true,
+    },
+
+    // Business-specific fields
+    businessName: {
+      type: String,
+      trim: true,
+    },
+    businessRegNumber: {
+      type: String,
+      trim: true,
+    },
+
+    // Shared optional
+    address: {
+      type: String,
+      trim: true,
     },
 
     trustScore: {
@@ -85,7 +116,7 @@ const UserSchema = new mongoose.Schema(
 );
 
 UserSchema.pre("save", async function () {
-  if (!this.isModified("password")) {
+  if (!this.password || !this.isModified("password")) {
     return;
   }
 
