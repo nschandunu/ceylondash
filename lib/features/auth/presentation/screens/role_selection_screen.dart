@@ -23,8 +23,9 @@ class RoleSelectionScreen extends StatelessWidget {
   void _onRoleSelected(BuildContext context, UserRole role) {
     Navigator.of(context).push(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => RegistrationScreen(role: role),
-        transitionsBuilder: (_, animation, __, child) {
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            RegistrationScreen(role: role),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(1, 0),
