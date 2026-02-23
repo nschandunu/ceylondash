@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
-import '../../../core/theme/app_text_styles.dart';
-import '../../auth/data/auth_service.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_dimensions.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../data/auth_service.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key, required this.role});
@@ -338,7 +338,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           const SizedBox(height: AppDimensions.spacing12),
           // Vehicle type dropdown
           DropdownButtonFormField<String>(
-            value: _vehicleType,
+            initialValue: _vehicleType,
             decoration: InputDecoration(
               labelText: 'Vehicle Type',
               labelStyle: AppTextStyles.bodyMedium,
