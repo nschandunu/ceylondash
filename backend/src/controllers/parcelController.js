@@ -1,5 +1,11 @@
+const crypto = require("crypto");
 const mongoose = require("mongoose");
 const Parcel = require("../models/Parcel");
+
+const generateTrackingCode = () => {
+  const hex = crypto.randomBytes(6).toString("hex").toUpperCase();
+  return `CD-${hex}`;
+};
 
 /**
  * Helper to check if user has ownership/access to a parcel
@@ -164,7 +170,106 @@ const getParcelById = async (req, res) => {
   }
 };
 
+const createParcel = async (req, res) => {
+  try {
+    const { deliveryAddress, receiverId, codAmount } = req.body;
+
+    if (!deliveryAddress) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "parcel/validation-error",
+          message: "Delivery address is required.",
+        },
+      });
+    }
+
+    if (receiverId && !mongoose.Types.ObjectId.isValid(receiverId)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "parcel/validation-error",
+          message: "Invalid receiver ID.",
+        },
+      });
+    }
+
+    const parcel = await Parcel.create({
+      senderId: req.user._id,
+      senderName: req.user.name,
+      receiverId: receiverId || undefined,
+      deliveryAddress,
+      codAmount: codAmount ?? 0,
+      trackingCode: generateTrackingCode(),
+      status: "pending",
+      statusHistory: [{ status: "pending", updatedAt: new Date() }],
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Parcel created successfully.",
+      data: {
+        _id: parcel._id.toString(),
+        trackingCode: parcel.trackingCode,
+        senderId: parcel.senderId.toString(),
+        senderName: parcel.senderName,
+        receiverId: parcel.receiverId?.toString() ?? null,
+        deliveryAddress: parcel.deliveryAddress,
+        codAmount: parcel.codAmount,
+        status: parcel.status,
+        statusHistory: parcel.statusHistory,
+        createdAt: parcel.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error("[parcelController.createParcel] Error:", error.message);
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        error: {
+          code: "parcel/duplicate-tracking",
+          message: "Tracking code collision. Please retry.",
+        },
+      });
+    }
+
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "parcel/validation-error",
+          message: error.message,
+        },
+      });
+    }
+
+    if (
+      error.name === "MongooseError" ||
+      error.message.includes("timed out") ||
+      error.message.includes("buffering timed out")
+    ) {
+      return res.status(503).json({
+        success: false,
+        error: {
+          code: "parcel/service-unavailable",
+          message: "Database service temporarily unavailable. Please try again.",
+        },
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: "parcel/internal-error",
+        message: "An unexpected error occurred while creating the parcel.",
+      },
+    });
+  }
+};
+
 module.exports = {
   getAllParcels,
   getParcelById,
+  createParcel,
 };
