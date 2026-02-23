@@ -11,12 +11,17 @@ class ParcelService {
   static const String _parcelsPath = '/api/parcels';
 
   Future<List<ParcelModel>> fetchParcels() async {
-    final response = await _execute(() => _dio.get<List<dynamic>>(_parcelsPath));
+    final response = await _execute(
+      () => _dio.get<Map<String, dynamic>>(_parcelsPath),
+    );
 
-    final data = response.data;
-    if (data == null) return const [];
+    final envelope = response.data;
+    if (envelope == null) return const [];
 
-    return data
+    final list = envelope['data'];
+    if (list == null || list is! List) return const [];
+
+    return list
         .whereType<Map<String, dynamic>>()
         .map(ParcelModel.fromJson)
         .toList();
@@ -27,7 +32,8 @@ class ParcelService {
       () => _dio.get<Map<String, dynamic>>('$_parcelsPath/$id'),
     );
 
-    return ParcelModel.fromJson(response.data!);
+    final data = response.data?['data'] as Map<String, dynamic>?;
+    return ParcelModel.fromJson(data ?? {});
   }
 
   Future<Map<String, dynamic>> requestPickupToken(String id) async {
@@ -98,10 +104,19 @@ class ParcelService {
   }
   
   String? _extractServerMessage(dynamic data) {
-    if (data is Map<String, dynamic>) {
-      final msg = data['message'] ?? data['error'];
+    if (data is! Map<String, dynamic>) return null;
+
+    // Backend shape: { "error": { "code": "...", "message": "..." } }
+    final errorObj = data['error'];
+    if (errorObj is Map<String, dynamic>) {
+      final msg = errorObj['message'];
       if (msg is String && msg.isNotEmpty) return msg;
     }
+
+    // Fallback for flat { "message": "..." } shapes
+    final msg = data['message'];
+    if (msg is String && msg.isNotEmpty) return msg;
+
     return null;
   }
 }
