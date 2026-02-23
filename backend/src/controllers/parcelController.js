@@ -23,26 +23,28 @@ const getAllParcels = async (req, res) => {
     const parcels = await Parcel.find({
       $or: [{ senderId: userId }, { receiverId: userId }],
     })
-      .populate({
-        path: "senderId",
-        select: "name phoneNumber -_id",
-      })
-      .populate({
-        path: "receiverId",
-        select: "name phoneNumber -_id",
-      })
-      .populate({
-        path: "assignedRiderId",
-        select: "name phoneNumber -_id",
-      })
       .select("-__v")
       .sort({ createdAt: -1 })
       .lean();
 
+    // Explicitly convert every ObjectId to a plain string so the Flutter
+    // client can deserialise them without special handling.
+    const data = parcels.map((p) => ({
+      ...p,
+      _id:             p._id.toString(),
+      senderId:        p.senderId?.toString() ?? null,
+      receiverId:      p.receiverId?.toString() ?? null,
+      assignedRiderId: p.assignedRiderId?.toString() ?? null,
+      statusHistory:   (p.statusHistory ?? []).map((h) => ({
+        ...h,
+        _id: h._id?.toString(),
+      })),
+    }));
+
     return res.status(200).json({
       success: true,
-      count: parcels.length,
-      data: parcels,
+      count: data.length,
+      data,
     });
   } catch (error) {
     console.error("[parcelController.getAllParcels] Error:", error.message);
