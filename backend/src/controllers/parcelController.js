@@ -268,8 +268,88 @@ const createParcel = async (req, res) => {
   }
 };
 
+const assignRider = async (req, res) => {
+  try {
+    const { id: parcelId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(parcelId)) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: "parcel/not-found",
+          message: "Parcel not found.",
+        },
+      });
+    }
+
+    const parcel = await Parcel.findById(parcelId);
+
+    if (!parcel) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: "parcel/not-found",
+          message: "Parcel not found.",
+        },
+      });
+    }
+
+    if (parcel.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "parcel/invalid-status",
+          message: `Cannot assign rider to a parcel with status "${parcel.status}". Parcel must be "pending".`,
+        },
+      });
+    }
+
+    parcel.assignedRiderId = req.user._id;
+    parcel.status = "in_transit";
+    parcel.statusHistory.push({ status: "in_transit", updatedAt: new Date() });
+
+    await parcel.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Rider assigned successfully.",
+      data: {
+        _id: parcel._id.toString(),
+        trackingCode: parcel.trackingCode,
+        assignedRiderId: parcel.assignedRiderId.toString(),
+        status: parcel.status,
+      },
+    });
+  } catch (error) {
+    console.error("[parcelController.assignRider] Error:", error.message);
+
+    if (
+      error.name === "MongooseError" ||
+      error.message.includes("timed out") ||
+      error.message.includes("buffering timed out")
+    ) {
+      return res.status(503).json({
+        success: false,
+        error: {
+          code: "parcel/service-unavailable",
+          message: "Database service temporarily unavailable. Please try again.",
+        },
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: "parcel/internal-error",
+        message: "An unexpected error occurred while assigning the rider.",
+      },
+    });
+  }
+};
+
 module.exports = {
   getAllParcels,
   getParcelById,
   createParcel,
+  assignRider,
 };
