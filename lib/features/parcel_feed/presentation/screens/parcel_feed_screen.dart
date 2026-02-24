@@ -72,9 +72,10 @@ class ParcelFeedScreen extends StatelessWidget {
               backgroundColor: AppColors.failed,
             ),
           );
-        } else if (state is HandoverTokenGenerated) {
+        } else if (state is HandoverTokenGenerated &&
+            feedMode != FeedMode.sent) {
           _showHandoverQRDialog(context, state);
-        } else if (state is HandoverVerified) {
+        } else if (state is HandoverVerified && feedMode != FeedMode.sent) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Delivery Successful!'),
