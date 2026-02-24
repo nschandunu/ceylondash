@@ -16,8 +16,13 @@ import '../widgets/parcel_card.dart';
 import 'feed_header_delegate.dart';
 import 'qr_scanner_screen.dart';
 
+/// Controls which subset of parcels the feed displays.
+enum FeedMode { all, sent, received }
+
 class ParcelFeedScreen extends StatelessWidget {
-  const ParcelFeedScreen({super.key});
+  const ParcelFeedScreen({super.key, this.feedMode = FeedMode.all});
+
+  final FeedMode feedMode;
 
   ParcelStats _computeStats(List<Parcel> parcels) {
     return ParcelStats(
@@ -28,6 +33,24 @@ class ParcelFeedScreen extends StatelessWidget {
       delivered:
           parcels.where((p) => p.status == ParcelStatus.delivered).length,
     );
+  }
+
+  String? _currentUserId(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      return authState.mongoUser['_id'] as String?;
+    }
+    return null;
+  }
+
+  List<Parcel> _filterParcels(List<Parcel> parcels, String? userId) {
+    if (userId == null || feedMode == FeedMode.all) return parcels;
+    return switch (feedMode) {
+      FeedMode.sent => parcels.where((p) => p.senderId == userId).toList(),
+      FeedMode.received =>
+        parcels.where((p) => p.receiverId == userId).toList(),
+      FeedMode.all => parcels,
+    };
   }
 
   @override
@@ -49,9 +72,10 @@ class ParcelFeedScreen extends StatelessWidget {
               backgroundColor: AppColors.failed,
             ),
           );
-        } else if (state is HandoverTokenGenerated) {
+        } else if (state is HandoverTokenGenerated &&
+            feedMode != FeedMode.sent) {
           _showHandoverQRDialog(context, state);
-        } else if (state is HandoverVerified) {
+        } else if (state is HandoverVerified && feedMode != FeedMode.sent) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Delivery Successful!'),
@@ -65,7 +89,9 @@ class ParcelFeedScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: BlocBuilder<ParcelBloc, ParcelState>(
         builder: (context, state) {
-          final parcels = _parcelsFromState(state);
+          final allParcels = _parcelsFromState(state);
+          final userId = _currentUserId(context);
+          final parcels = _filterParcels(allParcels, userId);
           final stats = _computeStats(parcels);
           final isActionInProgress = state is ParcelActionInProgress;
 
@@ -203,6 +229,12 @@ class ParcelFeedScreen extends StatelessWidget {
   // ── Empty ────────────────────────────────────────────────────────────────
 
   Widget _buildEmptySliver() {
+    final emptyMessage = switch (feedMode) {
+      FeedMode.sent => 'Parcels you send will appear here.',
+      FeedMode.received => 'Parcels sent to you will appear here.',
+      FeedMode.all => 'Your active and recent parcels will appear here.',
+    };
+
     return SliverFillRemaining(
       hasScrollBody: false,
       child: Center(
@@ -222,7 +254,7 @@ class ParcelFeedScreen extends StatelessWidget {
               Text('No Parcels Yet', style: AppTextStyles.heading3),
               const SizedBox(height: AppDimensions.spacing8),
               Text(
-                'Your active and recent parcels will appear here.',
+                emptyMessage,
                 style: AppTextStyles.bodyMedium
                     .copyWith(color: AppColors.textSecondary),
                 textAlign: TextAlign.center,
