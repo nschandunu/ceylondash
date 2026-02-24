@@ -46,3 +46,25 @@ class UpdateParcelStatus extends ParcelEvent {
   @override
   List<Object?> get props => [parcelId, status];
 }
+
+class GenerateHandoverToken extends ParcelEvent {
+  const GenerateHandoverToken(this.parcelId);
+
+  final String parcelId;
+
+  @override
+  List<Object?> get props => [parcelId];
+}
+
+class VerifyHandover extends ParcelEvent {
+  const VerifyHandover({
+    required this.parcelId,
+    required this.token,
+  });
+
+  final String parcelId;
+  final String token;
+
+  @override
+  List<Object?> get props => [parcelId, token];
+}

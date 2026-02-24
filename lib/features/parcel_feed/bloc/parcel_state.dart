@@ -48,3 +48,27 @@ class ParcelActionError extends ParcelState {
   @override
   List<Object?> get props => [parcels, message];
 }
+
+class HandoverTokenGenerated extends ParcelState {
+  const HandoverTokenGenerated({
+    required this.parcels,
+    required this.qrCode,
+    required this.token,
+  });
+
+  final List<ParcelModel> parcels;
+  final String? qrCode;
+  final String token;
+
+  @override
+  List<Object?> get props => [parcels, qrCode, token];
+}
+
+class HandoverVerified extends ParcelState {
+  const HandoverVerified(this.parcels);
+
+  final List<ParcelModel> parcels;
+
+  @override
+  List<Object?> get props => [parcels];
+}

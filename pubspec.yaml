@@ -23,6 +23,9 @@ dependencies:
   # State management
   flutter_bloc: ^9.1.0
 
+  # QR code scanning
+  mobile_scanner: ^6.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
