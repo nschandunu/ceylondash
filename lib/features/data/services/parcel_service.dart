@@ -36,6 +36,43 @@ class ParcelService {
     return ParcelModel.fromJson(data ?? {});
   }
 
+  Future<ParcelModel> createParcel({
+    required String deliveryAddress,
+    String? receiverId,
+    double codAmount = 0,
+  }) async {
+    final response = await _execute(
+      () => _dio.post<Map<String, dynamic>>(
+        _parcelsPath,
+        data: {
+          'deliveryAddress': deliveryAddress,
+          if (receiverId != null) 'receiverId': receiverId,
+          'codAmount': codAmount,
+        },
+      ),
+    );
+
+    final data = response.data?['data'] as Map<String, dynamic>?;
+    return ParcelModel.fromJson(data ?? {});
+  }
+
+  Future<void> assignRider(String parcelId) async {
+    await _execute(
+      () => _dio.patch<Map<String, dynamic>>(
+        '$_parcelsPath/$parcelId/assign',
+      ),
+    );
+  }
+
+  Future<void> updateParcelStatus(String parcelId, String status) async {
+    await _execute(
+      () => _dio.patch<Map<String, dynamic>>(
+        '$_parcelsPath/$parcelId/status',
+        data: {'status': status},
+      ),
+    );
+  }
+
   Future<Map<String, dynamic>> requestPickupToken(String id) async {
     final response = await _execute(
       () => _dio.post<Map<String, dynamic>>(
