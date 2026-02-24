@@ -38,3 +38,13 @@ class ParcelError extends ParcelState {
   @override
   List<Object?> get props => [message];
 }
+
+class ParcelActionError extends ParcelState {
+  const ParcelActionError({required this.parcels, required this.message});
+
+  final List<ParcelModel> parcels;
+  final String message;
+
+  @override
+  List<Object?> get props => [parcels, message];
+}
