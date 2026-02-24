@@ -1,44 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/enums/parcel_status.dart';
-import '../../../../core/exceptions/app_exceptions.dart';
 import '../../../../core/theme/theme.dart';
-import '../../../../features/data/models/parcel_model.dart';
-import '../../../../features/data/services/parcel_service.dart';
 import '../../../../features/domain/entities/parcel.dart';
+import '../../bloc/parcel_bloc.dart';
+import '../../bloc/parcel_event.dart';
+import '../../bloc/parcel_state.dart';
 import '../../data/mock_parcel_data.dart'; // ParcelStats
 import '../widgets/parcel_card.dart';
 import 'feed_header_delegate.dart';
 
-class ParcelFeedScreen extends StatefulWidget {
+class ParcelFeedScreen extends StatelessWidget {
   const ParcelFeedScreen({super.key});
-
-  @override
-  State<ParcelFeedScreen> createState() => _ParcelFeedScreenState();
-}
-
-class _ParcelFeedScreenState extends State<ParcelFeedScreen> {
-  final _service = ParcelService();
-  late Future<List<ParcelModel>> _parcelFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _parcelFuture = _service.fetchParcels();
-  }
-
-  void _retry() {
-    setState(() {
-      _parcelFuture = _service.fetchParcels();
-    });
-  }
-
-  Future<void> _refresh() async {
-    setState(() {
-      _parcelFuture = _service.fetchParcels();
-    });
-    await _parcelFuture;
-  }
 
   ParcelStats _computeStats(List<Parcel> parcels) {
     return ParcelStats(
@@ -63,15 +37,17 @@ class _ParcelFeedScreenState extends State<ParcelFeedScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: FutureBuilder<List<ParcelModel>>(
-        future: _parcelFuture,
-        builder: (context, snapshot) {
-          final parcels = snapshot.data ?? const [];
+      body: BlocBuilder<ParcelBloc, ParcelState>(
+        builder: (context, state) {
+          final parcels = _parcelsFromState(state);
           final stats = _computeStats(parcels);
+          final isActionInProgress = state is ParcelActionInProgress;
 
           return RefreshIndicator(
             color: AppColors.cyan,
-            onRefresh: _refresh,
+            onRefresh: () async {
+              context.read<ParcelBloc>().add(LoadParcels());
+            },
             child: CustomScrollView(
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
@@ -89,14 +65,14 @@ class _ParcelFeedScreenState extends State<ParcelFeedScreen> {
                   child: SizedBox(height: AppDimensions.spacing16),
                 ),
 
-                if (snapshot.connectionState == ConnectionState.waiting)
+                if (state is ParcelLoading)
                   _buildLoadingSliver()
-                else if (snapshot.hasError)
-                  _buildErrorSliver(snapshot.error!)
+                else if (state is ParcelError)
+                  _buildErrorSliver(context, state.message)
                 else if (parcels.isEmpty)
                   _buildEmptySliver()
                 else
-                  _buildParcelList(parcels),
+                  _buildParcelList(parcels, isActionInProgress),
 
                 const SliverToBoxAdapter(
                   child: SizedBox(height: AppDimensions.spacing32),
@@ -109,7 +85,13 @@ class _ParcelFeedScreenState extends State<ParcelFeedScreen> {
     );
   }
 
-  // ── Loading ────────────────────────────────────────────────────────────────
+  List<Parcel> _parcelsFromState(ParcelState state) {
+    if (state is ParcelLoaded) return state.parcels;
+    if (state is ParcelActionInProgress) return state.parcels;
+    return const [];
+  }
+
+  // ── Loading ──────────────────────────────────────────────────────────────
 
   Widget _buildLoadingSliver() {
     return SliverFillRemaining(
@@ -133,14 +115,9 @@ class _ParcelFeedScreenState extends State<ParcelFeedScreen> {
     );
   }
 
-  // ── Error ──────────────────────────────────────────────────────────────────
+  // ── Error ────────────────────────────────────────────────────────────────
 
-  Widget _buildErrorSliver(Object error) {
-    final isUnauthorized = error is UnauthorizedException;
-    final message = error is AppException
-        ? error.message
-        : 'An unexpected error occurred.';
-
+  Widget _buildErrorSliver(BuildContext context, String message) {
     return SliverFillRemaining(
       hasScrollBody: false,
       child: Center(
@@ -151,18 +128,13 @@ class _ParcelFeedScreenState extends State<ParcelFeedScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                isUnauthorized
-                    ? Icons.lock_outline_rounded
-                    : Icons.error_outline_rounded,
+              const Icon(
+                Icons.error_outline_rounded,
                 size: AppDimensions.iconXLarge,
                 color: AppColors.textHint,
               ),
               const SizedBox(height: AppDimensions.spacing16),
-              Text(
-                isUnauthorized ? 'Session Expired' : 'Something Went Wrong',
-                style: AppTextStyles.heading3,
-              ),
+              Text('Something Went Wrong', style: AppTextStyles.heading3),
               const SizedBox(height: AppDimensions.spacing8),
               Text(
                 message,
@@ -174,7 +146,8 @@ class _ParcelFeedScreenState extends State<ParcelFeedScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: _retry,
+                  onPressed: () =>
+                      context.read<ParcelBloc>().add(LoadParcels()),
                   icon: const Icon(Icons.refresh_rounded),
                   label: const Text('Retry'),
                   style: ElevatedButton.styleFrom(
@@ -197,7 +170,7 @@ class _ParcelFeedScreenState extends State<ParcelFeedScreen> {
     );
   }
 
-  // ── Empty ──────────────────────────────────────────────────────────────────
+  // ── Empty ────────────────────────────────────────────────────────────────
 
   Widget _buildEmptySliver() {
     return SliverFillRemaining(
@@ -231,29 +204,35 @@ class _ParcelFeedScreenState extends State<ParcelFeedScreen> {
     );
   }
 
-  // ── Data list ──────────────────────────────────────────────────────────────
+  // ── Data list ────────────────────────────────────────────────────────────
 
-  SliverList _buildParcelList(List<Parcel> parcels) {
+  Widget _buildParcelList(List<Parcel> parcels, bool isActionInProgress) {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
-          final parcel = parcels[index];
+          if (isActionInProgress && index == 0) {
+            return const Padding(
+              padding: EdgeInsets.only(bottom: AppDimensions.spacing8),
+              child: LinearProgressIndicator(
+                color: AppColors.cyan,
+                backgroundColor: AppColors.background,
+              ),
+            );
+          }
+
+          final parcelIndex = isActionInProgress ? index - 1 : index;
+          if (parcelIndex < 0) return const SizedBox.shrink();
+          final parcel = parcels[parcelIndex];
+
           return ParcelCard(
             parcel: parcel,
-            onTap: () => _onParcelTap(parcel),
-            onViewDetails: () => _onViewDetails(parcel),
+            onTap: () => debugPrint('Tapped parcel: ${parcel.trackingCode}'),
+            onViewDetails: () =>
+                debugPrint('View details for: ${parcel.trackingCode}'),
           );
         },
-        childCount: parcels.length,
+        childCount: parcels.length + (isActionInProgress ? 1 : 0),
       ),
     );
-  }
-
-  void _onParcelTap(Parcel parcel) {
-    debugPrint('Tapped parcel: ${parcel.trackingCode}');
-  }
-
-  void _onViewDetails(Parcel parcel) {
-    debugPrint('View details for: ${parcel.trackingCode}');
   }
 }
