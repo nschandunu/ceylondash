@@ -14,6 +14,8 @@ class ParcelBloc extends Bloc<ParcelEvent, ParcelState> {
     on<CreateParcel>(_onCreateParcel);
     on<ClaimParcel>(_onClaimParcel);
     on<UpdateParcelStatus>(_onUpdateParcelStatus);
+    on<GenerateHandoverToken>(_onGenerateHandoverToken);
+    on<VerifyHandover>(_onVerifyHandover);
   }
 
   final ParcelService _parcelService;
@@ -94,11 +96,58 @@ class ParcelBloc extends Bloc<ParcelEvent, ParcelState> {
     }
   }
 
+  Future<void> _onGenerateHandoverToken(
+    GenerateHandoverToken event,
+    Emitter<ParcelState> emit,
+  ) async {
+    final current = _currentParcels;
+    emit(ParcelActionInProgress(current));
+    try {
+      final result =
+          await _parcelService.generateHandoverToken(event.parcelId);
+      final qrCode = result['qrCode'] as String?;
+      final token = result['token'] as String? ?? '';
+      emit(HandoverTokenGenerated(
+        parcels: current,
+        qrCode: qrCode,
+        token: token,
+      ));
+    } on AppException catch (e) {
+      emit(ParcelActionError(parcels: current, message: e.message));
+    } catch (e) {
+      emit(ParcelActionError(
+          parcels: current, message: 'Failed to generate handover token.'));
+    }
+  }
+
+  Future<void> _onVerifyHandover(
+    VerifyHandover event,
+    Emitter<ParcelState> emit,
+  ) async {
+    final current = _currentParcels;
+    emit(ParcelActionInProgress(current));
+    try {
+      await _parcelService.validateHandoverToken(
+        event.parcelId,
+        event.token,
+      );
+      final parcels = await _parcelService.fetchParcels();
+      emit(HandoverVerified(parcels));
+    } on AppException catch (e) {
+      emit(ParcelActionError(parcels: current, message: e.message));
+    } catch (e) {
+      emit(ParcelActionError(
+          parcels: current, message: 'Failed to verify handover.'));
+    }
+  }
+
   List<ParcelModel> get _currentParcels {
     final s = state;
     if (s is ParcelLoaded) return s.parcels;
     if (s is ParcelActionInProgress) return s.parcels;
     if (s is ParcelActionError) return s.parcels;
+    if (s is HandoverTokenGenerated) return s.parcels;
+    if (s is HandoverVerified) return s.parcels;
     return const [];
   }
 }
