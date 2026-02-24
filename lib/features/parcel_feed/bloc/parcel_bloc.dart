@@ -48,9 +48,10 @@ class ParcelBloc extends Bloc<ParcelEvent, ParcelState> {
       final parcels = await _parcelService.fetchParcels();
       emit(ParcelLoaded(parcels));
     } on AppException catch (e) {
-      emit(ParcelError(e.message));
+      emit(ParcelActionError(parcels: current, message: e.message));
     } catch (e) {
-      emit(const ParcelError('Failed to create parcel.'));
+      emit(ParcelActionError(
+          parcels: current, message: 'Failed to create parcel.'));
     }
   }
 
@@ -65,9 +66,10 @@ class ParcelBloc extends Bloc<ParcelEvent, ParcelState> {
       final parcels = await _parcelService.fetchParcels();
       emit(ParcelLoaded(parcels));
     } on AppException catch (e) {
-      emit(ParcelError(e.message));
+      emit(ParcelActionError(parcels: current, message: e.message));
     } catch (e) {
-      emit(const ParcelError('Failed to claim parcel.'));
+      emit(ParcelActionError(
+          parcels: current, message: 'Failed to claim parcel.'));
     }
   }
 
@@ -85,9 +87,10 @@ class ParcelBloc extends Bloc<ParcelEvent, ParcelState> {
       final parcels = await _parcelService.fetchParcels();
       emit(ParcelLoaded(parcels));
     } on AppException catch (e) {
-      emit(ParcelError(e.message));
+      emit(ParcelActionError(parcels: current, message: e.message));
     } catch (e) {
-      emit(const ParcelError('Failed to update parcel status.'));
+      emit(ParcelActionError(
+          parcels: current, message: 'Failed to update parcel status.'));
     }
   }
 
@@ -95,6 +98,7 @@ class ParcelBloc extends Bloc<ParcelEvent, ParcelState> {
     final s = state;
     if (s is ParcelLoaded) return s.parcels;
     if (s is ParcelActionInProgress) return s.parcels;
+    if (s is ParcelActionError) return s.parcels;
     return const [];
   }
 }

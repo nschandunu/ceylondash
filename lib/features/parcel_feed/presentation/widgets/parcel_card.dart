@@ -16,6 +16,7 @@ class ParcelCard extends StatelessWidget {
   final ValueChanged<String>? onUpdateStatus;
   final String? userRole;
   final String? currentUserId;
+  final bool isLoading;
 
   const ParcelCard({
     super.key,
@@ -26,6 +27,7 @@ class ParcelCard extends StatelessWidget {
     this.onUpdateStatus,
     this.userRole,
     this.currentUserId,
+    this.isLoading = false,
   });
 
   @override
@@ -117,12 +119,23 @@ class ParcelCard extends StatelessWidget {
         width: double.infinity,
         height: AppDimensions.touchTargetMin,
         child: ElevatedButton.icon(
-          onPressed: onClaimDelivery,
-          icon: const Icon(Icons.delivery_dining, size: AppDimensions.iconMedium),
-          label: const Text('Claim Delivery'),
+          onPressed: isLoading ? null : onClaimDelivery,
+          icon: isLoading
+              ? const SizedBox(
+                  width: AppDimensions.iconMedium,
+                  height: AppDimensions.iconMedium,
+                  child: CircularProgressIndicator(
+                    color: AppColors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Icon(Icons.delivery_dining, size: AppDimensions.iconMedium),
+          label: Text(isLoading ? 'Claiming\u2026' : 'Claim Delivery'),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.cyan,
             foregroundColor: AppColors.white,
+            disabledBackgroundColor: AppColors.cyan.withAlpha(128),
+            disabledForegroundColor: AppColors.white.withAlpha(180),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppDimensions.buttonRadius),
             ),
@@ -137,12 +150,23 @@ class ParcelCard extends StatelessWidget {
         width: double.infinity,
         height: AppDimensions.touchTargetMin,
         child: ElevatedButton.icon(
-          onPressed: () => onUpdateStatus!('out_for_delivery'),
-          icon: const Icon(Icons.local_shipping, size: AppDimensions.iconMedium),
-          label: const Text('Mark Out for Delivery'),
+          onPressed: isLoading ? null : () => onUpdateStatus!('out_for_delivery'),
+          icon: isLoading
+              ? const SizedBox(
+                  width: AppDimensions.iconMedium,
+                  height: AppDimensions.iconMedium,
+                  child: CircularProgressIndicator(
+                    color: AppColors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Icon(Icons.local_shipping, size: AppDimensions.iconMedium),
+          label: Text(isLoading ? 'Updating\u2026' : 'Mark Out for Delivery'),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.outForDelivery,
             foregroundColor: AppColors.white,
+            disabledBackgroundColor: AppColors.outForDelivery.withAlpha(128),
+            disabledForegroundColor: AppColors.white.withAlpha(180),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppDimensions.buttonRadius),
             ),
