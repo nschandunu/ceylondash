@@ -14,6 +14,7 @@ import '../../../auth/bloc/auth_state.dart';
 import '../../data/mock_parcel_data.dart'; // ParcelStats
 import '../widgets/parcel_card.dart';
 import 'feed_header_delegate.dart';
+import 'qr_scanner_screen.dart';
 
 class ParcelFeedScreen extends StatelessWidget {
   const ParcelFeedScreen({super.key});
