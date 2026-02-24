@@ -73,14 +73,34 @@ class ParcelService {
     );
   }
 
-  Future<Map<String, dynamic>> requestPickupToken(String id) async {
+  /// Calls POST /api/parcels/:id/generate-token.
+  /// Returns { token, qrCode } from the response data envelope.
+  Future<Map<String, dynamic>> generateHandoverToken(String parcelId) async {
     final response = await _execute(
       () => _dio.post<Map<String, dynamic>>(
-        '$_parcelsPath/$id/generate-token',
+        '$_parcelsPath/$parcelId/generate-token',
       ),
     );
 
-    return response.data ?? {};
+    final data = response.data?['data'] as Map<String, dynamic>?;
+    return data ?? {};
+  }
+
+  /// Calls POST /api/parcels/:id/validate-token.
+  /// Returns the response data envelope on success.
+  Future<Map<String, dynamic>> validateHandoverToken(
+    String parcelId,
+    String token,
+  ) async {
+    final response = await _execute(
+      () => _dio.post<Map<String, dynamic>>(
+        '$_parcelsPath/$parcelId/validate-token',
+        data: {'token': token},
+      ),
+    );
+
+    final data = response.data?['data'] as Map<String, dynamic>?;
+    return data ?? {};
   }
 
   Future<Response<T>> _execute<T>(Future<Response<T>> Function() call) async {
