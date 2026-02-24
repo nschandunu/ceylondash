@@ -37,7 +37,18 @@ class ParcelFeedScreen extends StatelessWidget {
       ),
     );
 
-    return Scaffold(
+    return BlocListener<ParcelBloc, ParcelState>(
+      listener: (context, state) {
+        if (state is ParcelActionError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.failed,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
       backgroundColor: AppColors.background,
       body: BlocBuilder<ParcelBloc, ParcelState>(
         builder: (context, state) {
@@ -84,12 +95,14 @@ class ParcelFeedScreen extends StatelessWidget {
           );
         },
       ),
+    ),
     );
   }
 
   List<Parcel> _parcelsFromState(ParcelState state) {
     if (state is ParcelLoaded) return state.parcels;
     if (state is ParcelActionInProgress) return state.parcels;
+    if (state is ParcelActionError) return state.parcels;
     return const [];
   }
 
@@ -238,6 +251,7 @@ class ParcelFeedScreen extends StatelessWidget {
             parcel: parcel,
             userRole: userRole,
             currentUserId: currentUserId,
+            isLoading: isActionInProgress,
             onTap: () => debugPrint('Tapped parcel: ${parcel.trackingCode}'),
             onViewDetails: () =>
                 debugPrint('View details for: ${parcel.trackingCode}'),
