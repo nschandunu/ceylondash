@@ -25,10 +25,22 @@ const hasParcelAccess = (parcel, user) => {
 const getAllParcels = async (req, res) => {
   try {
     const userId = req.user._id;
+    const role = req.user.role;
 
-    const parcels = await Parcel.find({
-      $or: [{ senderId: userId }, { receiverId: userId }],
-    })
+    let query;
+    if (role === "admin") {
+      query = {};
+    } else if (role === "rider") {
+      query = {
+        $or: [{ status: "pending" }, { assignedRiderId: userId }],
+      };
+    } else {
+      query = {
+        $or: [{ senderId: userId }, { receiverId: userId }],
+      };
+    }
+
+    const parcels = await Parcel.find(query)
       .select("-__v")
       .sort({ createdAt: -1 })
       .lean();
