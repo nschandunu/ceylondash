@@ -3,7 +3,7 @@ const router = express.Router();
 
 const { protect, restrictTo } = require("../middleware/authMiddleware");
 const { getAllParcels, getParcelById, createParcel, assignRider, updateStatus } = require("../controllers/parcelController");
-const { generateHandoverToken } = require("../controllers/verificationController");
+const { generateHandoverToken, validateHandoverToken } = require("../controllers/verificationController");
 
 router.get("/", protect, getAllParcels);
 
@@ -16,5 +16,7 @@ router.patch("/:id/assign", protect, restrictTo("rider", "admin"), assignRider);
 router.patch("/:id/status", protect, updateStatus);
 
 router.post("/:id/generate-token", protect, generateHandoverToken);
+
+router.post("/:id/validate-token", protect, validateHandoverToken);
 
 module.exports = router;
