@@ -44,7 +44,6 @@ const ParcelSchema = new mongoose.Schema(
     receiverId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "Receiver ID is required"],
       index: true,
     },
 

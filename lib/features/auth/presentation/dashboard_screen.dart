@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../parcel_feed/presentation/screens/create_parcel_screen.dart';
 import '../../parcel_feed/presentation/screens/parcel_feed_screen.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -62,6 +63,16 @@ class DashboardScreen extends StatelessWidget {
         ],
       ),
       body: const ParcelFeedScreen(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const CreateParcelScreen(),
+            ),
+          );
+        },
+        child: const Icon(Icons.add_rounded),
+      ),
     );
   }
 }

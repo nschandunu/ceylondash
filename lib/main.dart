@@ -6,6 +6,8 @@ import 'core/theme/theme.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/bloc/auth_event.dart';
 import 'features/auth/presentation/auth_wrapper.dart';
+import 'features/parcel_feed/bloc/parcel_bloc.dart';
+import 'features/parcel_feed/bloc/parcel_event.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,8 +20,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => AuthBloc()..add(AuthStarted()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => AuthBloc()..add(AuthStarted())),
+        BlocProvider(create: (_) => ParcelBloc()..add(LoadParcels())),
+      ],
       child: MaterialApp(
         title: 'CeylonDash',
         debugShowCheckedModeBanner: false,

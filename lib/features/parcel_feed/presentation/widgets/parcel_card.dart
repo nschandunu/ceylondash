@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import '../../../../core/enums/parcel_status.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../features/domain/entities/parcel.dart';
 import '../extensions/parcel_status_ui_extension.dart';
@@ -11,12 +12,22 @@ class ParcelCard extends StatelessWidget {
   final Parcel parcel;
   final VoidCallback? onTap;
   final VoidCallback? onViewDetails;
+  final VoidCallback? onClaimDelivery;
+  final ValueChanged<String>? onUpdateStatus;
+  final String? userRole;
+  final String? currentUserId;
+  final bool isLoading;
 
   const ParcelCard({
     super.key,
     required this.parcel,
     this.onTap,
     this.onViewDetails,
+    this.onClaimDelivery,
+    this.onUpdateStatus,
+    this.userRole,
+    this.currentUserId,
+    this.isLoading = false,
   });
 
   @override
@@ -71,6 +82,10 @@ class ParcelCard extends StatelessWidget {
                     _buildHeader(),
                     const SizedBox(height: AppDimensions.spacing16),
                     _buildProgressSection(),
+                    if (_shouldShowRiderActions) ...[
+                      const SizedBox(height: AppDimensions.spacing16),
+                      _buildRiderActions(),
+                    ],
                     const SizedBox(height: AppDimensions.spacing20),
                     _buildActionSection(),
                   ],
@@ -81,6 +96,86 @@ class ParcelCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  bool get _shouldShowRiderActions {
+    if (userRole != 'rider') return false;
+    if (parcel.status == ParcelStatus.pending && onClaimDelivery != null) {
+      return true;
+    }
+    if (parcel.status == ParcelStatus.inTransit &&
+        currentUserId != null &&
+        parcel.assignedRiderId == currentUserId &&
+        onUpdateStatus != null) {
+      return true;
+    }
+    return false;
+  }
+
+  Widget _buildRiderActions() {
+    // Pending parcel → "Claim Delivery" button
+    if (parcel.status == ParcelStatus.pending && onClaimDelivery != null) {
+      return SizedBox(
+        width: double.infinity,
+        height: AppDimensions.touchTargetMin,
+        child: ElevatedButton.icon(
+          onPressed: isLoading ? null : onClaimDelivery,
+          icon: isLoading
+              ? const SizedBox(
+                  width: AppDimensions.iconMedium,
+                  height: AppDimensions.iconMedium,
+                  child: CircularProgressIndicator(
+                    color: AppColors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Icon(Icons.delivery_dining, size: AppDimensions.iconMedium),
+          label: Text(isLoading ? 'Claiming\u2026' : 'Claim Delivery'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.cyan,
+            foregroundColor: AppColors.white,
+            disabledBackgroundColor: AppColors.cyan.withAlpha(128),
+            disabledForegroundColor: AppColors.white.withAlpha(180),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.buttonRadius),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // In-transit parcel owned by this rider → "Out for Delivery" button
+    if (parcel.status == ParcelStatus.inTransit && onUpdateStatus != null) {
+      return SizedBox(
+        width: double.infinity,
+        height: AppDimensions.touchTargetMin,
+        child: ElevatedButton.icon(
+          onPressed: isLoading ? null : () => onUpdateStatus!('out_for_delivery'),
+          icon: isLoading
+              ? const SizedBox(
+                  width: AppDimensions.iconMedium,
+                  height: AppDimensions.iconMedium,
+                  child: CircularProgressIndicator(
+                    color: AppColors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Icon(Icons.local_shipping, size: AppDimensions.iconMedium),
+          label: Text(isLoading ? 'Updating\u2026' : 'Mark Out for Delivery'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.outForDelivery,
+            foregroundColor: AppColors.white,
+            disabledBackgroundColor: AppColors.outForDelivery.withAlpha(128),
+            disabledForegroundColor: AppColors.white.withAlpha(180),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.buttonRadius),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   Widget _buildHeader() {

@@ -1,5 +1,11 @@
+const crypto = require("crypto");
 const mongoose = require("mongoose");
 const Parcel = require("../models/Parcel");
+
+const generateTrackingCode = () => {
+  const hex = crypto.randomBytes(6).toString("hex").toUpperCase();
+  return `CD-${hex}`;
+};
 
 /**
  * Helper to check if user has ownership/access to a parcel
@@ -19,10 +25,22 @@ const hasParcelAccess = (parcel, user) => {
 const getAllParcels = async (req, res) => {
   try {
     const userId = req.user._id;
+    const role = req.user.role;
 
-    const parcels = await Parcel.find({
-      $or: [{ senderId: userId }, { receiverId: userId }],
-    })
+    let query;
+    if (role === "admin") {
+      query = {};
+    } else if (role === "rider") {
+      query = {
+        $or: [{ status: "pending" }, { assignedRiderId: userId }],
+      };
+    } else {
+      query = {
+        $or: [{ senderId: userId }, { receiverId: userId }],
+      };
+    }
+
+    const parcels = await Parcel.find(query)
       .select("-__v")
       .sort({ createdAt: -1 })
       .lean();
@@ -164,7 +182,296 @@ const getParcelById = async (req, res) => {
   }
 };
 
+const createParcel = async (req, res) => {
+  try {
+    const { deliveryAddress, receiverId, codAmount } = req.body;
+
+    if (!deliveryAddress) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "parcel/validation-error",
+          message: "Delivery address is required.",
+        },
+      });
+    }
+
+    if (receiverId && !mongoose.Types.ObjectId.isValid(receiverId)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "parcel/validation-error",
+          message: "Invalid receiver ID.",
+        },
+      });
+    }
+
+    const parcel = await Parcel.create({
+      senderId: req.user._id,
+      senderName: req.user.name,
+      receiverId: receiverId || undefined,
+      deliveryAddress,
+      codAmount: codAmount ?? 0,
+      trackingCode: generateTrackingCode(),
+      status: "pending",
+      statusHistory: [{ status: "pending", updatedAt: new Date() }],
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Parcel created successfully.",
+      data: {
+        _id: parcel._id.toString(),
+        trackingCode: parcel.trackingCode,
+        senderId: parcel.senderId.toString(),
+        senderName: parcel.senderName,
+        receiverId: parcel.receiverId?.toString() ?? null,
+        deliveryAddress: parcel.deliveryAddress,
+        codAmount: parcel.codAmount,
+        status: parcel.status,
+        statusHistory: parcel.statusHistory,
+        createdAt: parcel.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error("[parcelController.createParcel] Error:", error.message);
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        error: {
+          code: "parcel/duplicate-tracking",
+          message: "Tracking code collision. Please retry.",
+        },
+      });
+    }
+
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "parcel/validation-error",
+          message: error.message,
+        },
+      });
+    }
+
+    if (
+      error.name === "MongooseError" ||
+      error.message.includes("timed out") ||
+      error.message.includes("buffering timed out")
+    ) {
+      return res.status(503).json({
+        success: false,
+        error: {
+          code: "parcel/service-unavailable",
+          message: "Database service temporarily unavailable. Please try again.",
+        },
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: "parcel/internal-error",
+        message: "An unexpected error occurred while creating the parcel.",
+      },
+    });
+  }
+};
+
+const assignRider = async (req, res) => {
+  try {
+    const { id: parcelId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(parcelId)) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: "parcel/not-found",
+          message: "Parcel not found.",
+        },
+      });
+    }
+
+    const parcel = await Parcel.findById(parcelId);
+
+    if (!parcel) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: "parcel/not-found",
+          message: "Parcel not found.",
+        },
+      });
+    }
+
+    if (parcel.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "parcel/invalid-status",
+          message: `Cannot assign rider to a parcel with status "${parcel.status}". Parcel must be "pending".`,
+        },
+      });
+    }
+
+    parcel.assignedRiderId = req.user._id;
+    parcel.status = "in_transit";
+    parcel.statusHistory.push({ status: "in_transit", updatedAt: new Date() });
+
+    await parcel.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Rider assigned successfully.",
+      data: {
+        _id: parcel._id.toString(),
+        trackingCode: parcel.trackingCode,
+        assignedRiderId: parcel.assignedRiderId.toString(),
+        status: parcel.status,
+      },
+    });
+  } catch (error) {
+    console.error("[parcelController.assignRider] Error:", error.message);
+
+    if (
+      error.name === "MongooseError" ||
+      error.message.includes("timed out") ||
+      error.message.includes("buffering timed out")
+    ) {
+      return res.status(503).json({
+        success: false,
+        error: {
+          code: "parcel/service-unavailable",
+          message: "Database service temporarily unavailable. Please try again.",
+        },
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: "parcel/internal-error",
+        message: "An unexpected error occurred while assigning the rider.",
+      },
+    });
+  }
+};
+
+const VALID_TRANSITIONS = {
+  pending: ["in_transit", "cancelled"],
+  in_transit: ["out_for_delivery", "failed"],
+  out_for_delivery: ["delivered", "failed"],
+  delivered: [],
+  cancelled: [],
+  failed: ["pending"],
+};
+
+const updateStatus = async (req, res) => {
+  try {
+    const { id: parcelId } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "parcel/validation-error",
+          message: "Status is required.",
+        },
+      });
+    }
+
+    if (!VALID_TRANSITIONS[status] && !Object.keys(VALID_TRANSITIONS).includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "parcel/validation-error",
+          message: `"${status}" is not a valid parcel status.`,
+        },
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(parcelId)) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: "parcel/not-found",
+          message: "Parcel not found.",
+        },
+      });
+    }
+
+    const parcel = await Parcel.findById(parcelId);
+
+    if (!parcel) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: "parcel/not-found",
+          message: "Parcel not found.",
+        },
+      });
+    }
+
+    const allowed = VALID_TRANSITIONS[parcel.status];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "parcel/invalid-transition",
+          message: `Cannot transition from "${parcel.status}" to "${status}".`,
+        },
+      });
+    }
+
+    parcel.status = status;
+    parcel.statusHistory.push({ status, updatedAt: new Date() });
+
+    await parcel.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Parcel status updated to "${status}".`,
+      data: {
+        _id: parcel._id.toString(),
+        trackingCode: parcel.trackingCode,
+        status: parcel.status,
+        statusHistory: parcel.statusHistory,
+      },
+    });
+  } catch (error) {
+    console.error("[parcelController.updateStatus] Error:", error.message);
+
+    if (
+      error.name === "MongooseError" ||
+      error.message.includes("timed out") ||
+      error.message.includes("buffering timed out")
+    ) {
+      return res.status(503).json({
+        success: false,
+        error: {
+          code: "parcel/service-unavailable",
+          message: "Database service temporarily unavailable. Please try again.",
+        },
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: "parcel/internal-error",
+        message: "An unexpected error occurred while updating the parcel status.",
+      },
+    });
+  }
+};
+
 module.exports = {
   getAllParcels,
   getParcelById,
+  createParcel,
+  assignRider,
+  updateStatus,
 };
