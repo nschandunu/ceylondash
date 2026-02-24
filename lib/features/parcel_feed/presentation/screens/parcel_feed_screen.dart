@@ -356,6 +356,95 @@ class ParcelFeedScreen extends StatelessWidget {
     );
   }
 
+  // ── PIN Entry Dialog (Rider fallback) ───────────────────────────────────
+
+  void _showPINEntryDialog(BuildContext context, String parcelId) {
+    final pinController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.cardBorderRadius),
+          ),
+          title: Text('Enter Handover PIN', style: AppTextStyles.heading3),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Ask the receiver for their manual PIN code.',
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: AppDimensions.spacing16),
+              TextField(
+                controller: pinController,
+                textCapitalization: TextCapitalization.characters,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.heading3.copyWith(letterSpacing: 4),
+                decoration: InputDecoration(
+                  hintText: 'e.g. A1B2C3D4',
+                  hintStyle: AppTextStyles.bodyMedium
+                      .copyWith(color: AppColors.textHint),
+                  filled: true,
+                  fillColor: AppColors.background,
+                  border: OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.spacing12),
+                    borderSide: BorderSide(color: AppColors.divider),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.spacing12),
+                    borderSide: BorderSide(color: AppColors.divider),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.spacing12),
+                    borderSide:
+                        const BorderSide(color: AppColors.cyan, width: 2),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(
+                'Cancel',
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: AppColors.textSecondary),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final token = pinController.text.trim();
+                if (token.isEmpty) return;
+                Navigator.of(dialogContext).pop();
+                context.read<ParcelBloc>().add(VerifyHandover(
+                      parcelId: parcelId,
+                      token: token,
+                    ));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.delivered,
+                foregroundColor: AppColors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(AppDimensions.buttonRadius),
+                ),
+              ),
+              child: const Text('Submit'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   // ── Data list ────────────────────────────────────────────────────────────
 
   Widget _buildParcelList(List<Parcel> parcels, bool isActionInProgress) {
@@ -408,6 +497,8 @@ class ParcelFeedScreen extends StatelessWidget {
                     builder: (_) => const QRScannerScreen(),
                   ),
                 ),
+            onEnterPINManually: () =>
+                _showPINEntryDialog(context, parcel.id),
           );
         },
         childCount: parcels.length + (isActionInProgress ? 1 : 0),
