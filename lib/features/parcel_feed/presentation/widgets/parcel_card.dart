@@ -14,6 +14,8 @@ class ParcelCard extends StatelessWidget {
   final VoidCallback? onViewDetails;
   final VoidCallback? onClaimDelivery;
   final ValueChanged<String>? onUpdateStatus;
+  final VoidCallback? onShowHandoverQR;
+  final VoidCallback? onScanHandoverQR;
   final String? userRole;
   final String? currentUserId;
   final bool isLoading;
@@ -25,6 +27,8 @@ class ParcelCard extends StatelessWidget {
     this.onViewDetails,
     this.onClaimDelivery,
     this.onUpdateStatus,
+    this.onShowHandoverQR,
+    this.onScanHandoverQR,
     this.userRole,
     this.currentUserId,
     this.isLoading = false,
@@ -86,6 +90,10 @@ class ParcelCard extends StatelessWidget {
                       const SizedBox(height: AppDimensions.spacing16),
                       _buildRiderActions(),
                     ],
+                    if (_shouldShowHandoverActions) ...[
+                      const SizedBox(height: AppDimensions.spacing16),
+                      _buildHandoverActions(),
+                    ],
                     const SizedBox(height: AppDimensions.spacing20),
                     _buildActionSection(),
                   ],
@@ -96,6 +104,91 @@ class ParcelCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  bool get _shouldShowHandoverActions {
+    if (parcel.status != ParcelStatus.outForDelivery) return false;
+    // Receiver sees "Show Handover QR"
+    if (userRole == 'user' &&
+        currentUserId != null &&
+        parcel.receiverId == currentUserId &&
+        onShowHandoverQR != null) {
+      return true;
+    }
+    // Rider sees "Scan Receiver QR"
+    if (userRole == 'rider' &&
+        currentUserId != null &&
+        parcel.assignedRiderId == currentUserId &&
+        onScanHandoverQR != null) {
+      return true;
+    }
+    return false;
+  }
+
+  Widget _buildHandoverActions() {
+    // Receiver → generate & show QR
+    if (userRole == 'user' && onShowHandoverQR != null) {
+      return SizedBox(
+        width: double.infinity,
+        height: AppDimensions.touchTargetMin,
+        child: ElevatedButton.icon(
+          onPressed: isLoading ? null : onShowHandoverQR,
+          icon: isLoading
+              ? const SizedBox(
+                  width: AppDimensions.iconMedium,
+                  height: AppDimensions.iconMedium,
+                  child: CircularProgressIndicator(
+                    color: AppColors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Icon(Icons.qr_code, size: AppDimensions.iconMedium),
+          label: Text(isLoading ? 'Generating\u2026' : 'Show Handover QR'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.delivered,
+            foregroundColor: AppColors.white,
+            disabledBackgroundColor: AppColors.delivered.withAlpha(128),
+            disabledForegroundColor: AppColors.white.withAlpha(180),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.buttonRadius),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Rider → scan QR
+    if (userRole == 'rider' && onScanHandoverQR != null) {
+      return SizedBox(
+        width: double.infinity,
+        height: AppDimensions.touchTargetMin,
+        child: ElevatedButton.icon(
+          onPressed: isLoading ? null : onScanHandoverQR,
+          icon: isLoading
+              ? const SizedBox(
+                  width: AppDimensions.iconMedium,
+                  height: AppDimensions.iconMedium,
+                  child: CircularProgressIndicator(
+                    color: AppColors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Icon(Icons.qr_code_scanner, size: AppDimensions.iconMedium),
+          label: Text(isLoading ? 'Verifying\u2026' : 'Scan Receiver QR'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.delivered,
+            foregroundColor: AppColors.white,
+            disabledBackgroundColor: AppColors.delivered.withAlpha(128),
+            disabledForegroundColor: AppColors.white.withAlpha(180),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.buttonRadius),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   bool get _shouldShowRiderActions {

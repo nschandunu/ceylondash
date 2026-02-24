@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -46,6 +48,16 @@ class ParcelFeedScreen extends StatelessWidget {
               backgroundColor: AppColors.failed,
             ),
           );
+        } else if (state is HandoverTokenGenerated) {
+          _showHandoverQRDialog(context, state);
+        } else if (state is HandoverVerified) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Delivery Successful!'),
+              backgroundColor: AppColors.delivered,
+            ),
+          );
+          context.read<ParcelBloc>().add(LoadParcels());
         }
       },
       child: Scaffold(
@@ -103,6 +115,8 @@ class ParcelFeedScreen extends StatelessWidget {
     if (state is ParcelLoaded) return state.parcels;
     if (state is ParcelActionInProgress) return state.parcels;
     if (state is ParcelActionError) return state.parcels;
+    if (state is HandoverTokenGenerated) return state.parcels;
+    if (state is HandoverVerified) return state.parcels;
     return const [];
   }
 
@@ -219,6 +233,97 @@ class ParcelFeedScreen extends StatelessWidget {
     );
   }
 
+  // ── Handover QR Dialog ──────────────────────────────────────────────────
+
+  void _showHandoverQRDialog(
+    BuildContext context,
+    HandoverTokenGenerated state,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: AppColors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.cardBorderRadius),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppDimensions.spacing24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Handover QR Code', style: AppTextStyles.heading3),
+                const SizedBox(height: AppDimensions.spacing8),
+                Text(
+                  'Show this to your rider to confirm delivery.',
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(color: AppColors.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppDimensions.spacing24),
+                if (state.qrCode != null) ...[
+                  ClipRRect(
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.spacing12),
+                    child: Image.memory(
+                      base64Decode(
+                        state.qrCode!.replaceFirst(
+                          RegExp(r'data:image/png;base64,'),
+                          '',
+                        ),
+                      ),
+                      width: 220,
+                      height: 220,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ] else ...[
+                  Container(
+                    width: 220,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius:
+                          BorderRadius.circular(AppDimensions.spacing12),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      state.token,
+                      style: AppTextStyles.heading3,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: AppDimensions.spacing16),
+                Text(
+                  'Token: ${state.token}',
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: AppDimensions.spacing24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.cyan,
+                      foregroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.buttonRadius),
+                      ),
+                    ),
+                    child: const Text('Close'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // ── Data list ────────────────────────────────────────────────────────────
 
   Widget _buildParcelList(List<Parcel> parcels, bool isActionInProgress) {
@@ -261,6 +366,14 @@ class ParcelFeedScreen extends StatelessWidget {
                   UpdateParcelStatus(
                     parcelId: parcel.id,
                     status: ParcelStatusParser.fromString(status),
+                  ),
+                ),
+            onShowHandoverQR: () => context
+                .read<ParcelBloc>()
+                .add(GenerateHandoverToken(parcel.id)),
+            onScanHandoverQR: () => Navigator.of(context).push(
+                  MaterialPageRoute<String>(
+                    builder: (_) => const QRScannerScreen(),
                   ),
                 ),
           );
