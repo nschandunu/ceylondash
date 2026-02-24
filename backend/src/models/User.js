@@ -49,7 +49,7 @@ const UserSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      required: [true, "Password is required"],
+      required: false, // Not required for Firebase-synced users
       minlength: [8, "Password must be at least 8 characters"],
       select: false,
     },
@@ -62,6 +62,36 @@ const UserSchema = new mongoose.Schema(
         message: '"{VALUE}" is not a permitted role',
       },
     },
+
+    // --- Role-specific fields ---
+
+    // User role
+    defaultDeliveryAddress: {
+      type: String,
+      trim: true,
+    },
+
+    // Rider role
+    vehicleType: {
+      type: String,
+      enum: {
+        values: ["bike", "three-wheeler", "van"],
+        message: '"{VALUE}" is not a valid vehicle type',
+      },
+    },
+
+    licensePlateNumber: {
+      type: String,
+      trim: true,
+    },
+
+    // Admin role
+    adminAccessPasscode: {
+      type: String,
+      select: false,
+    },
+
+    // --- End role-specific fields ---
 
     trustScore: {
       type: Number,

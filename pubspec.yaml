@@ -20,6 +20,9 @@ dependencies:
   # Value equality for immutable objects
   equatable: ^2.0.7
 
+  # State management
+  flutter_bloc: ^9.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
