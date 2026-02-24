@@ -295,11 +295,42 @@ class ParcelFeedScreen extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: AppDimensions.spacing16),
+                const SizedBox(height: AppDimensions.spacing20),
+                const Divider(color: AppColors.divider),
+                const SizedBox(height: AppDimensions.spacing12),
                 Text(
-                  'Token: ${state.token}',
+                  'Manual PIN',
                   style: AppTextStyles.bodySmall
                       .copyWith(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: AppDimensions.spacing8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppDimensions.spacing12,
+                    horizontal: AppDimensions.spacing16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.spacing12),
+                    border: Border.all(color: AppColors.divider),
+                  ),
+                  child: Text(
+                    state.token,
+                    style: AppTextStyles.heading3.copyWith(
+                      letterSpacing: 6,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.spacing4),
+                Text(
+                  'Share this PIN if the rider cannot scan.',
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: AppColors.textHint, fontSize: 11),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppDimensions.spacing24),
                 SizedBox(
