@@ -7,6 +7,8 @@ import '../../../../features/domain/entities/parcel.dart';
 import '../../bloc/parcel_bloc.dart';
 import '../../bloc/parcel_event.dart';
 import '../../bloc/parcel_state.dart';
+import '../../../auth/bloc/auth_bloc.dart';
+import '../../../auth/bloc/auth_state.dart';
 import '../../data/mock_parcel_data.dart'; // ParcelStats
 import '../widgets/parcel_card.dart';
 import 'feed_header_delegate.dart';
@@ -224,11 +226,29 @@ class ParcelFeedScreen extends StatelessWidget {
           if (parcelIndex < 0) return const SizedBox.shrink();
           final parcel = parcels[parcelIndex];
 
+          final authState = context.read<AuthBloc>().state;
+          String? userRole;
+          String? currentUserId;
+          if (authState is Authenticated) {
+            userRole = authState.mongoUser['role'] as String?;
+            currentUserId = authState.mongoUser['_id'] as String?;
+          }
+
           return ParcelCard(
             parcel: parcel,
+            userRole: userRole,
+            currentUserId: currentUserId,
             onTap: () => debugPrint('Tapped parcel: ${parcel.trackingCode}'),
             onViewDetails: () =>
                 debugPrint('View details for: ${parcel.trackingCode}'),
+            onClaimDelivery: () =>
+                context.read<ParcelBloc>().add(ClaimParcel(parcel.id)),
+            onUpdateStatus: (status) => context.read<ParcelBloc>().add(
+                  UpdateParcelStatus(
+                    parcelId: parcel.id,
+                    status: ParcelStatusParser.fromString(status),
+                  ),
+                ),
           );
         },
         childCount: parcels.length + (isActionInProgress ? 1 : 0),
